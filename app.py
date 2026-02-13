@@ -161,7 +161,7 @@ if 'texto_paciente' not in st.session_state:
 
 with st.container():
     texto_final = st.text_area(
-        "Anamnese do Paciente:", 
+        "Informações do Paciente:", 
         value=st.session_state['texto_paciente'], 
         height=200,
         placeholder="Ex: Carlos, 45 anos, 90kg, 1.80m. Objetivo: Perda de peso. Restrição: Lactose."
@@ -180,3 +180,4 @@ if st.button("📝 GERAR PROTOCOLO ALIMENTAR"):
             st.download_button("📥 BAIXAR PDF FINAL", data=pdf_bytes, file_name=f"Dieta_{datetime.now().strftime('%d%m')}.pdf", mime="application/pdf")
     else:
         st.warning("⚠️ Preencha os dados do paciente.")
+
