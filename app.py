@@ -6,53 +6,40 @@ from datetime import datetime
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="NutriSmart AI - Elite", layout="centered", page_icon="🥗")
 
-# --- 2. CSS CORRIGIDO (CURSOR VISÍVEL) ---
+# --- 2. CSS (CURSOR PRETO + TEXTO ORIENTADOR) ---
 st.markdown("""
 <style>
-    /* Fundo Geral */
-    .stApp { 
-        background: linear-gradient(135deg, #051c10 0%, #0d3321 100%); 
-        font-family: 'Segoe UI', sans-serif; 
-    }
+    .stApp { background: linear-gradient(135deg, #051c10 0%, #0d3321 100%); font-family: 'Segoe UI', sans-serif; }
+    h1 { color: #00e676 !important; text-align: center; font-weight: 700; }
     
-    /* Títulos */
-    h1 { color: #00e676 !important; text-align: center; font-weight: 700; letter-spacing: 1px; }
-    
-    /* Botões */
     .stButton>button { 
         background: linear-gradient(90deg, #00c853 0%, #00e676 100%); 
-        color: #003300; 
-        font-weight: 800; 
-        border: none; 
-        height: 3.5em; 
-        width: 100%; 
-        border-radius: 12px; 
-        text-transform: uppercase; 
-        box-shadow: 0 4px 15px rgba(0, 230, 118, 0.4); 
-        transition: all 0.3s; 
+        color: #003300; font-weight: 800; border: none; height: 3.5em; width: 100%; border-radius: 12px;
     }
-    .stButton>button:hover { transform: scale(1.02); filter: brightness(1.1); }
-    
-    /* --- CORREÇÃO DA CAIXA DE TEXTO --- */
+
+    /* Caixa de Texto com Placeholder Cinza */
     .stTextArea textarea { 
-        background-color: #ffffff !important; /* Fundo Branco Puro */
-        color: #000000 !important; /* Texto Preto */
-        caret-color: #000000 !important; /* CURSOR PRETO (O SEGREDO) */
+        background-color: #ffffff !important; 
+        color: #000000 !important; 
+        caret-color: #000000 !important; 
         border: 2px solid #00c853; 
         border-radius: 8px; 
-        font-size: 16px; /* Letra maior para ler melhor */
+        font-size: 16px;
     }
     
-    /* Esconder menus padrão */
-    #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
+    /* Estilizando o texto de exemplo (placeholder) */
+    .stTextArea textarea::placeholder {
+        color: #a0a0a0 !important;
+        opacity: 1;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 3. CONEXÃO NUVEM (GROQ) ---
+# --- 3. CONEXÃO NUVEM ---
 try:
     api_key = st.secrets["GROQ_API_KEY"]
 except:
-    st.error("⚠️ Erro: Chave API não configurada nos Secrets.")
+    st.error("⚠️ Erro: Chave API não configurada.")
     st.stop()
 
 client = OpenAI(base_url="https://api.groq.com/openai/v1", api_key=api_key)
@@ -62,63 +49,44 @@ class PDF(FPDF):
     def header(self):
         self.set_draw_color(0, 150, 50)
         self.set_line_width(0.8)
-        self.set_font('Arial', 'B', 24)
+        self.set_font('Arial', 'B', 22)
         self.set_text_color(0, 100, 30)
         self.cell(0, 10, 'NUTRI SMART CLINIC', 0, 1, 'C')
-        self.set_font('Arial', 'I', 11)
+        self.set_font('Arial', 'I', 10)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 6, 'Planejamento Alimentar & Estratégia Metabólica', 0, 1, 'C')
+        self.cell(0, 5, 'Relatório de Performance Alimentar', 0, 1, 'C')
         self.ln(5)
         self.line(10, 32, 200, 32)
-        self.ln(10)
+        self.ln(8)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(128, 128, 128)
-        self.cell(0, 10, 'Gerado via NutriSmart Cloud - Consulte seu médico.', 0, 0, 'C')
+        self.cell(0, 10, 'Documento gerado por IA - NutriSmart Cloud.', 0, 0, 'C')
 
-# --- 5. LÓGICA IA ---
+# --- 5. LÓGICA IA (PROMPT PARA NOME E OBESIDADE) ---
 def gerar_dieta_ia(texto_entrada):
     prompt = f"""
-    VOCÊ É UM NUTRICIONISTA DE ELITE.
-    OBJETIVO: Gerar um plano alimentar visualmente limpo e direto.
+    VOCÊ É UM NUTRICIONISTA ESPORTIVO E CLÍNICO.
     
-    REGRAS VISUAIS (IMPORTANTE):
-    1. NÃO use frases introdutórias. VÁ DIRETO AOS DADOS.
-    2. Use listas com marcadores (-) para opções.
-    3. Use APENAS Português BR.
+    TAREFA: Gerar um plano alimentar focado no paciente abaixo.
     
-    ESTRUTURA OBRIGATÓRIA:
-    1. DIAGNÓSTICO
-    - Perfil: [Resumo]
-    - IMC: [Valor] ([Classificação])
-    - Gasto Calórico Basal: [Valor] kcal (Estimativa)
+    REGRAS CRÍTICAS:
+    1. IDENTIFIQUE O NOME: Comece o PDF com "PACIENTE: [NOME ENCONTRADO]".
+    2. DIAGNÓSTICO OBRIGATÓRIO: Calcule o IMC e descreva explicitamente o grau de obesidade (Grau I, II ou III/Mórbida) se for o caso.
+    3. SEM CONVERSA FIADA: Vá direto aos títulos e listas.
     
-    2. ESTRATÉGIA
-    - [Descreva a estratégia em bullets curtos]
+    ESTRUTURA:
+    PACIENTE: [Nome]
     
-    3. PLANO ALIMENTAR
-    CAFÉ DA MANHÃ:
-    - Opção 1: [Alimentos e quantidades caseiras]
-    - Opção 2: [Alimentos e quantidades caseiras]
+    1. AVALIAÇÃO METABÓLICA
+    - IMC: [Valor] - [Classificação/Grau]
+    - Gasto Energético: [Valor] kcal
     
-    ALMOÇO:
-    - Opção 1: [Alimentos e quantidades caseiras]
-    - Opção 2: [Alimentos e quantidades caseiras]
+    2. PLANO ALIMENTAR (CAFÉ, ALMOÇO, LANCHE, JANTAR com opções)
     
-    LANCHE DA TARDE:
-    - Opção 1: [Alimentos e quantidades caseiras]
-    - Opção 2: [Alimentos e quantidades caseiras]
-    
-    JANTAR:
-    - Opção 1: [Alimentos e quantidades caseiras]
-    - Opção 2: [Alimentos e quantidades caseiras]
-    
-    4. SUPLEMENTAÇÃO E DICAS
-    - [Lista curta de dicas]
-
-    PACIENTE: "{texto_entrada}"
+    DADOS: "{texto_entrada}"
     """
     try:
         response = client.chat.completions.create(
@@ -128,9 +96,9 @@ def gerar_dieta_ia(texto_entrada):
         )
         return response.choices[0].message.content
     except Exception as e:
-        return f"Erro IA: {e}"
+        return f"Erro: {e}"
 
-# --- 6. GERADOR DE PDF VISUAL ---
+# --- 6. GERADOR DE PDF ---
 def criar_pdf_nutri(texto_dieta):
     pdf = PDF()
     pdf.add_page()
@@ -138,7 +106,7 @@ def criar_pdf_nutri(texto_dieta):
     
     linhas = texto_dieta.split('\n')
     for linha in linhas:
-        linha = linha.strip().replace('*', '') 
+        linha = linha.strip().replace('*', '')
         if not linha:
             pdf.ln(2)
             continue
@@ -148,57 +116,52 @@ def criar_pdf_nutri(texto_dieta):
         except:
             linha_limpa = linha
 
-        if (linha[0].isdigit() and linha[1] == '.') or (linha.isupper() and len(linha) < 40 and "OPÇÃO" not in linha):
-            pdf.ln(4)
+        # Destaque para o Nome do Paciente no início
+        if "PACIENTE:" in linha_limpa.upper():
             pdf.set_font("Arial", 'B', 14)
+            pdf.set_text_color(0, 0, 0)
+            pdf.cell(0, 10, txt=linha_limpa, ln=True)
+            pdf.ln(2)
+        # Títulos
+        elif (linha[0].isdigit() and linha[1] == '.') or (linha.isupper() and len(linha) < 40):
+            pdf.ln(4)
+            pdf.set_font("Arial", 'B', 12)
             pdf.set_text_color(0, 100, 0)
             pdf.cell(0, 8, txt=linha_limpa, ln=True)
-            pdf.line(pdf.get_x(), pdf.get_y(), pdf.get_x() + 100, pdf.get_y())
-            pdf.ln(2)
-        elif any(x in linha.upper() for x in ["CAFÉ", "ALMOÇO", "JANTA", "LANCHE"]) and len(linha) < 50:
-            pdf.ln(2)
-            pdf.set_font("Arial", 'B', 12)
+            pdf.ln(1)
+        # Refeições
+        elif any(x in linha.upper() for x in ["CAFÉ", "ALMOÇO", "JANTA", "LANCHE"]):
+            pdf.set_font("Arial", 'B', 11)
             pdf.set_text_color(0, 128, 64)
+            pdf.ln(2)
             pdf.cell(0, 6, txt=linha_limpa, ln=True)
-        elif linha.startswith("-") or linha.startswith("•"):
-            pdf.set_font("Arial", size=10)
-            pdf.set_text_color(50, 50, 50)
-            pdf.set_x(15) 
-            pdf.multi_cell(0, 5, txt=linha_limpa)
+        # Itens
         else:
             pdf.set_font("Arial", size=10)
             pdf.set_text_color(40, 40, 40)
-            pdf.set_x(10)
             pdf.multi_cell(0, 5, txt=linha_limpa)
             
     return pdf.output(dest='S').encode('latin-1')
 
 # --- 7. INTERFACE ---
-st.title("NUTRI SMART ONLINE ☁️")
-st.markdown('<p style="text-align:center; color:#a3d9c5;">Planejamento Dietético Profissional</p>', unsafe_allow_html=True)
+st.title("NUTRI SMART CLOUD 🥗")
 
-if 'texto_paciente' not in st.session_state:
-    st.session_state['texto_paciente'] = ""
+# Placeholder com o roteiro que você pediu
+placeholder_text = "Nome:\nIdade:\nPeso:\nAltura:\nObjetivo:\nRestrições:"
 
-with st.container():
-    texto_final = st.text_area(
-        "Informações do Paciente:", 
-        value=st.session_state['texto_paciente'], 
-        height=200,
-        placeholder="Digite aqui os dados do paciente..."
-    )
-    if texto_final != st.session_state['texto_paciente']:
-        st.session_state['texto_paciente'] = texto_final
+texto_usuario = st.text_area(
+    "Dados para a Ficha:", 
+    height=200,
+    placeholder=placeholder_text
+)
 
-st.write("")
-if st.button("📝 GERAR PROTOCOLO ALIMENTAR"):
-    if texto_final:
-        with st.spinner("Processando dados metabólicos..."):
-            conteudo = gerar_dieta_ia(texto_final)
-            with st.expander("Ver Prévia", expanded=True):
+if st.button("🚀 GERAR FICHA E PLANO"):
+    if texto_usuario:
+        with st.spinner("Analisando dados e gerando diagnóstico..."):
+            conteudo = gerar_dieta_ia(texto_usuario)
+            with st.expander("Prévia do Plano"):
                 st.write(conteudo)
             pdf_bytes = criar_pdf_nutri(conteudo)
-            st.download_button("📥 BAIXAR PDF FINAL", data=pdf_bytes, file_name=f"Dieta_{datetime.now().strftime('%d%m')}.pdf", mime="application/pdf")
+            st.download_button("📥 BAIXAR PDF PROFISSIONAL", data=pdf_bytes, file_name="Plano_Nutricional.pdf")
     else:
-        st.warning("⚠️ Preencha os dados do paciente.")
-
+        st.warning("Por favor, preencha os dados do paciente.")
